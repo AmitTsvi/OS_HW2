@@ -170,6 +170,7 @@ int get_regime();
 void change_regime(int activate);
 inline void sc_dequeue_task(struct task_struct *p);
 inline void sc_enqueue_task(struct task_struct *p);
+void add_task_to_sc_queue(struct task_struct *p);
 
 
 /*

@@ -290,6 +290,9 @@ static inline void activate_task(task_t *p, runqueue_t *rq)
 		p->prio = effective_prio(p);
 	}
 	enqueue_task(p, array);
+	if(p->policy == SCHED_CHANGEABLE){
+		sc_enqueue_task(p);
+	}
 	rq->nr_running++;
 }
 
@@ -401,6 +404,9 @@ repeat_lock_task:
 		 * If sync is set, a resched_task() is a NOOP
 		 */
 		if (p->prio < rq->curr->prio)
+			resched_task(rq->curr);
+		if (rq->regime && rq->curr->policy == SCHED_CHANGEABLE &&
+			p->policy == SCHED_CHANGEABLE && rq->curr->pid > p->pid)
 			resched_task(rq->curr);
 		success = 1;
 	}
@@ -2032,15 +2038,17 @@ int sys_get_policy(pid_t pid){
     return rq->regime;
 }
 
+// ==> AI code already in activate_task func
 void add_task_to_sc_queue(task_t *p){
 	runqueue_t* rq = this_rq();
-	spin_lock_irq(rq);
-	sc_enqueue_task(p);
+	// spin_lock_irq(rq);
+	// sc_enqueue_task(p);
+	// spin_unlock_irq(rq);
 	//child is SC so push him to special queue
 	if(rq->regime)
 		current->need_resched = 0;
 	//when policy on father should not leave cpu
-	spin_unlock_irq(rq);
+
 }
 
 #ifdef CONFIG_LOLAT_SYSCTL
