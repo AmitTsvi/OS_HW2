@@ -724,6 +724,8 @@ static inline void idle_tick(void)
 
 #endif
 
+static int get_sc_min_pid(void);
+
 /*
  * We place interactive tasks back into the active array, if possible.
  *
@@ -824,6 +826,25 @@ out:
 
 void scheduling_functions_start_here(void) { }
 
+// ==> AI
+static int get_sc_min_pid(void){
+	runqueue_t *rq = this_rq();
+	struct list_head* tmp;
+	task_t* curr;
+	int min_pid=-1;
+
+	list_for_each(tmp, rq->sc_queue->queue) {
+		curr = list_entry(tmp, task_t, run_list);
+		if(min_pid == -1){
+			min_pid = curr->pid;
+		}
+		if(curr->pid < min_pid){
+			min_pid = curr->pid;
+		}
+	}
+	return min_pid;
+}
+
 /*
  * 'schedule()' is the main scheduler function.
  */
@@ -889,7 +910,7 @@ pick_next_task:
 	//				then check if it is the minimal pid if not move to expired
 	if(rq->regime && next->policy == SCHED_CHANGEABLE){
 		int min_sc = get_sc_min_pid();
-		if(next->pid_t != min){
+		if(next->pid != min_sc){
 			dequeue_task(next, rq->active);
 			enqueue_task(next, rq->expired);
 			goto need_resched;
@@ -1875,7 +1896,7 @@ static struct lolat_stats_t *lolat_stats_head;
 static spinlock_t lolat_stats_lock = SPIN_LOCK_UNLOCKED;
 
 // ==> AI
-int get_regime(){
+int get_regime(void){
 	runqueue_t* rq = this_rq();
 	return rq->regime;
 }
@@ -1883,24 +1904,6 @@ int get_regime(){
 void change_regime(int activate){
 	runqueue_t* rq = this_rq();
 	rq->regime = activate;
-}
-// ==> AI
-int get_sc_min_pid(){
-	runqueue_t *rq = this_rq();
-	struct list_head* tmp;
-	task_t* curr;
-	int min_pid=-1;
-
-	list_for_each(tmp, rq->sc_queue->queue[0]) {
-		curr = list_entry(tmp, task_t, run_list);
-		if(min_pid == -1){
-			min_pid = curr->pid_t;
-		}
-		if(curr->pid_t < min_pid){
-			min_pid = curr->pid_t;
-		}
-	}
-	return min_pid;
 }
 
 void set_running_and_schedule(struct lolat_stats_t *stats)
@@ -1978,6 +1981,66 @@ int ll_copy_from_user(void *to, const void *from_user, unsigned long len)
 		conditional_schedule();
 	}
 	return 0;
+}
+// ==> AI
+typedef struct task_struct task_tt;
+
+int sys_is_changeable(pid_t pid){
+    task_tt *p = find_task_by_pid(pid);
+    if(!p){
+        return -ESRCH;
+    }
+    return p->policy == SCHED_CHANGEABLE;
+}
+
+int sys_make_changeable(pid_t pid){
+    task_tt *p = find_task_by_pid(pid);
+    if(!p){
+        return -ESRCH;
+    }
+    if(current->policy == SCHED_CHANGEABLE || p->policy == SCHED_CHANGEABLE){
+        return -EINVAL;
+    }
+    runqueue_t *rq = this_rq();
+    spin_lock_irq(rq);
+    sc_enqueue_task(p);
+    spin_unlock_irq(rq);
+    p->policy = SCHED_CHANGEABLE;
+    return 0;
+}
+
+int sys_change(int val){
+    if(val != 1 && val != 0){
+        return -EINVAL;
+    }
+    runqueue_t *rq = this_rq();
+    rq->regime=val;
+    if(current->policy == SCHED_CHANGEABLE)
+        current->need_resched=1;
+    return 0;
+}
+
+int sys_get_policy(pid_t pid){
+    task_tt *p = find_task_by_pid(pid);
+    if(!p){
+        return -ESRCH;
+    }
+    if(p->policy != SCHED_CHANGEABLE){
+        return -EINVAL;
+    }
+    runqueue_t *rq = this_rq();
+    return rq->regime;
+}
+
+void add_task_to_sc_queue(task_t *p){
+	runqueue_t* rq = this_rq();
+	spin_lock_irq(rq);
+	sc_enqueue_task(p);
+	//child is SC so push him to special queue
+	if(rq->regime)
+		current->need_resched = 0;
+	//when policy on father should not leave cpu
+	spin_unlock_irq(rq);
 }
 
 #ifdef CONFIG_LOLAT_SYSCTL

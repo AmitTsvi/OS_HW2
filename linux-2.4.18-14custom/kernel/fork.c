@@ -23,6 +23,7 @@
 #include <linux/personality.h>
 #include <linux/compiler.h>
 #include <linux/mman.h>
+#include <linux/sched.h>
 
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
@@ -786,14 +787,7 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 		current->need_resched = 1;
 	// ==> AI :
 	if (p->policy == SCHED_CHANGEABLE){
-		runqueue_t* rq = this_rq();
-		spin_lock_irq(rq);
-		sc_enqueue_task(p);
-		spin_unlock_irq(rq);
-		//child is SC so push him to special queue
-		if(rq->regime)
-			current->need_resched = 0;
-		//when policy on father should not leave cpu
+		add_task_to_sc_queue(p);
 	}
 
 fork_out:

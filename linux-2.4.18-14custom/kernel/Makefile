@@ -32,7 +32,7 @@ ifneq ($(CONFIG_IA64),y)
 # I turn this off for IA-64 only.  Andreas Schwab says it's also needed on m68k
 # to get a correct value for the wait-channel (WCHAN in ps). --davidm
 #
-# Some gcc's are building so that O(1) scheduler is triple faulting if we 
+# Some gcc's are building so that O(1) scheduler is triple faulting if we
 # build -O2. Nobody yet knows why, but for the moment let's keep O1
 # (Turns out to be a CPU issue. Update your microcode if you hit it)
 #
@@ -50,4 +50,3 @@ $(TOPDIR)/scripts/mkconfigs: $(TOPDIR)/scripts/mkconfigs.c
 
 configs.c: $(TOPDIR)/.config $(TOPDIR)/scripts/mkconfigs
 	$(TOPDIR)/scripts/mkconfigs $(TOPDIR)/.config configs.c
-
