@@ -220,14 +220,15 @@ static inline void dequeue_task(struct task_struct *p, prio_array_t *array)
 		__clear_bit(p->prio, array->bitmap);
 }
  // ==> AI
-inline void sc_dequeue_task(struct task_struct *p)
+inline void sc_dequeue_task(struct task_struct *p, prio_array_t *array, runqueue_t *rq)
 {
-	runqueue_t* rq = this_rq();
+	printk("==> AI <B> sc_dequeue_task\n");
 	list_del(&p->sc_run_list);
-	if (list_empty(rq->sc_queue->queue)){
-		__clear_bit(0, rq->sc_queue->bitmap);
+	if (list_empty(array->queue)){
+		__clear_bit(0, array->bitmap);
 		rq->regime = 0; // init regime;
 	}
+	printk("==> AI <E> sc_dequeue_task\n");
 }
 
 static inline void enqueue_task(struct task_struct *p, prio_array_t *array)
@@ -238,11 +239,12 @@ static inline void enqueue_task(struct task_struct *p, prio_array_t *array)
 	p->array = array;
 }
  // ==> AI
-inline void sc_enqueue_task(struct task_struct *p)
+inline void sc_enqueue_task(struct task_struct *p, prio_array_t *array)
 {
-	runqueue_t *rq = this_rq();
-	list_add_tail(&p->sc_run_list, rq->sc_queue->queue);
-	__set_bit(0, rq->sc_queue->bitmap);
+	printk("==> AI <B> sc_equeue_task\n");
+	list_add_tail(&p->sc_run_list, array->queue);
+	__set_bit(0, array->bitmap);
+	printk("==> AI <E> sc_equeue_task\n");
 }
 
 static inline int effective_prio(task_t *p)
@@ -291,7 +293,8 @@ static inline void activate_task(task_t *p, runqueue_t *rq)
 	}
 	enqueue_task(p, array);
 	if(p->policy == SCHED_CHANGEABLE){
-		sc_enqueue_task(p);
+		printk("==> AI activate_task with SCHED_CHANGEABLE policy and pid: %d\n",p->pid);
+		sc_enqueue_task(p, rq->sc_queue);
 	}
 	rq->nr_running++;
 }
@@ -304,7 +307,8 @@ static inline void deactivate_task(struct task_struct *p, runqueue_t *rq)
 	dequeue_task(p, p->array);
 	// ==> AI
 	if(p->policy == SCHED_CHANGEABLE){
-		sc_dequeue_task(p);
+		printk("==> AI deactivate_task with SCHED_CHANGEABLE policy and pid: %d\n",p->pid);
+		sc_dequeue_task(p, rq->sc_queue, rq);
 	}
 
 	p->array = NULL;
@@ -403,11 +407,21 @@ repeat_lock_task:
 		/*
 		 * If sync is set, a resched_task() is a NOOP
 		 */
-		if (p->prio < rq->curr->prio)
-			resched_task(rq->curr);
-		if (rq->regime && rq->curr->policy == SCHED_CHANGEABLE &&
-			p->policy == SCHED_CHANGEABLE && rq->curr->pid > p->pid)
-			resched_task(rq->curr);
+		 // ==> AI :
+		if (!rq->regime){
+			if(p->prio < rq->curr->prio)
+				resched_task(rq->curr);
+		}else{
+			if(p->prio < rq->curr->prio && rq->curr->prio != SCHED_CHANGEABLE){
+				printk("==> AI: in sched.c try_to_wake_up regime-on processes are NOT SCHED_CHANGEABLE p->prio < rq->curr->prio\n");
+				resched_task(rq->curr);
+			}
+			if(rq->curr->policy == SCHED_CHANGEABLE &&
+				p->policy == SCHED_CHANGEABLE && rq->curr->pid > p->pid){
+				printk("==> AI: in sched.c try_to_wake_up regime-on processes are SCHED_CHANGEABLE rq->curr->pid > p->pid\n");
+				resched_task(rq->curr);
+			}
+		}
 		success = 1;
 	}
 	p->state = TASK_RUNNING;
@@ -834,6 +848,7 @@ void scheduling_functions_start_here(void) { }
 
 // ==> AI
 static int get_sc_min_pid(void){
+	printk("==> AI <B> get sc min pid\n");
 	runqueue_t *rq = this_rq();
 	struct list_head* tmp;
 	task_t* curr;
@@ -848,6 +863,7 @@ static int get_sc_min_pid(void){
 			min_pid = curr->pid;
 		}
 	}
+	printk("==> AI <E> get sc min - pid value %d\n",min_pid);
 	return min_pid;
 }
 
@@ -917,8 +933,10 @@ pick_next_task:
 	if(rq->regime && next->policy == SCHED_CHANGEABLE){
 		int min_sc = get_sc_min_pid();
 		if(next->pid != min_sc){
+			printk("==> AI reschedule SC process without minimum sc pid\n");
 			dequeue_task(next, rq->active);
 			enqueue_task(next, rq->expired);
+			spin_unlock_irq(&rq->lock);
 			goto need_resched;
 		}
 	}
@@ -1489,6 +1507,7 @@ asmlinkage long sys_sched_get_priority_max(int policy)
 		ret = MAX_USER_RT_PRIO-1;
 		break;
 	case SCHED_OTHER:
+	case SCHED_CHANGEABLE:
 		ret = 0;
 		break;
 	}
@@ -1505,6 +1524,7 @@ asmlinkage long sys_sched_get_priority_min(int policy)
 		ret = 1;
 		break;
 	case SCHED_OTHER:
+	case SCHED_CHANGEABLE:
 		ret = 0;
 	}
 	return ret;
@@ -1992,14 +2012,17 @@ int ll_copy_from_user(void *to, const void *from_user, unsigned long len)
 typedef struct task_struct task_tt;
 
 int sys_is_changeable(pid_t pid){
+	printk("==> AI <B> sys_is_changeable\n");
     task_tt *p = find_task_by_pid(pid);
     if(!p){
         return -ESRCH;
     }
+	printk("==> AI <E> sys_is_changeable SUCCESS\n");
     return p->policy == SCHED_CHANGEABLE;
 }
 
 int sys_make_changeable(pid_t pid){
+	printk("==> AI <B> sys_make_changeable\n");
     task_tt *p = find_task_by_pid(pid);
     if(!p){
         return -ESRCH;
@@ -2008,14 +2031,16 @@ int sys_make_changeable(pid_t pid){
         return -EINVAL;
     }
     runqueue_t *rq = this_rq();
-    spin_lock_irq(rq);
-    sc_enqueue_task(p);
-    spin_unlock_irq(rq);
-    p->policy = SCHED_CHANGEABLE;
+    spin_lock_irq(&rq->lock);
+    sc_enqueue_task(p, rq->sc_queue);
+	p->policy = SCHED_CHANGEABLE;
+    spin_unlock_irq(&rq->lock);
+	printk("==> AI <E> sys_make_changeable SUCCESS\n");
     return 0;
 }
 
 int sys_change(int val){
+	printk("==> AI <B> sys_change\n");
     if(val != 1 && val != 0){
         return -EINVAL;
     }
@@ -2023,10 +2048,12 @@ int sys_change(int val){
     rq->regime=val;
     if(current->policy == SCHED_CHANGEABLE)
         current->need_resched=1;
+	printk("==> AI <E> sys_change SUCCESS\n");
     return 0;
 }
 
 int sys_get_policy(pid_t pid){
+	printk("==> AI <B> sys_get_policy\n");
     task_tt *p = find_task_by_pid(pid);
     if(!p){
         return -ESRCH;
@@ -2035,6 +2062,7 @@ int sys_get_policy(pid_t pid){
         return -EINVAL;
     }
     runqueue_t *rq = this_rq();
+	printk("==> AI <E> sys_get_policy SUCCESS\n");
     return rq->regime;
 }
 

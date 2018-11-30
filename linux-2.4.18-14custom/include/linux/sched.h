@@ -166,10 +166,10 @@ extern int start_context_thread(void);
 extern int current_is_keventd(void);
 
 // ==> AI
-int get_regime();
+int get_regime(void);
 void change_regime(int activate);
-inline void sc_dequeue_task(struct task_struct *p);
-inline void sc_enqueue_task(struct task_struct *p);
+// inline void sc_dequeue_task(struct task_struct *p, prio_array_t *array, runqueue_t *rq);
+// inline void sc_enqueue_task(struct task_struct *p, prio_array_t *array);
 void add_task_to_sc_queue(struct task_struct *p);
 
 
