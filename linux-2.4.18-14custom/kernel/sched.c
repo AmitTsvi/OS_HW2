@@ -138,10 +138,12 @@ struct runqueue {
 	unsigned long nr_running, nr_switches, expired_timestamp;
 	signed long nr_uninterruptible;
 	task_t *curr, *idle;
-	prio_array_t *active, *expired, arrays[2];
+	prio_array_t *active, *expired, arrays[3];
 	int prev_nr_running[NR_CPUS];
 	task_t *migration_thread;
 	list_t migration_queue;
+	prio_array_t *sc_queue;
+	int regime;
 } ____cacheline_aligned;
 
 static struct runqueue runqueues[NR_CPUS] __cacheline_aligned;
@@ -217,6 +219,16 @@ static inline void dequeue_task(struct task_struct *p, prio_array_t *array)
 	if (list_empty(array->queue + p->prio))
 		__clear_bit(p->prio, array->bitmap);
 }
+ // ==> AI
+inline void sc_dequeue_task(struct task_struct *p)
+{
+	runqueue_t* rq = this_rq();
+	list_del(&p->sc_run_list);
+	if (list_empty(rq->sc_queue->queue)){
+		__clear_bit(0, rq->sc_queue->bitmap);
+		rq->regime = 0; // init regime;
+	}
+}
 
 static inline void enqueue_task(struct task_struct *p, prio_array_t *array)
 {
@@ -224,6 +236,13 @@ static inline void enqueue_task(struct task_struct *p, prio_array_t *array)
 	__set_bit(p->prio, array->bitmap);
 	array->nr_active++;
 	p->array = array;
+}
+ // ==> AI
+inline void sc_enqueue_task(struct task_struct *p)
+{
+	runqueue_t *rq = this_rq();
+	list_add_tail(&p->sc_run_list, rq->sc_queue->queue);
+	__set_bit(0, rq->sc_queue->bitmap);
 }
 
 static inline int effective_prio(task_t *p)
@@ -280,6 +299,11 @@ static inline void deactivate_task(struct task_struct *p, runqueue_t *rq)
 	if (p->state == TASK_UNINTERRUPTIBLE)
 		rq->nr_uninterruptible++;
 	dequeue_task(p, p->array);
+	// ==> AI
+	if(p->policy == SCHED_CHANGEABLE){
+		sc_dequeue_task(p);
+	}
+
 	p->array = NULL;
 }
 
@@ -720,9 +744,15 @@ static inline void idle_tick(void)
  */
 void scheduler_tick(int user_tick, int system)
 {
+
 	int cpu = smp_processor_id();
 	runqueue_t *rq = this_rq();
 	task_t *p = current;
+
+	// ==> AI:
+   if(rq->regime && current->policy == SCHED_CHANGEABLE){
+	   return;
+   }
 
 	if (p == rq->idle) {
 		if (local_bh_count(cpu) || local_irq_count(cpu) > 1)
@@ -852,10 +882,19 @@ pick_next_task:
 		array = rq->active;
 		rq->expired_timestamp = 0;
 	}
-
 	idx = sched_find_first_bit(array->bitmap);
 	queue = array->queue + idx;
 	next = list_entry(queue->next, task_t, run_list);
+	//==> AI; if policy is enabled && next policy is SC;
+	//				then check if it is the minimal pid if not move to expired
+	if(rq->regime && next->policy == SCHED_CHANGEABLE){
+		int min_sc = get_sc_min_pid();
+		if(next->pid_t != min){
+			dequeue_task(next, rq->active);
+			enqueue_task(next, rq->expired);
+			goto need_resched;
+		}
+	}
 
 switch_tasks:
 	prefetch(next);
@@ -864,7 +903,7 @@ switch_tasks:
 	if (likely(prev != next)) {
 		rq->nr_switches++;
 		rq->curr = next;
-	
+
 		prepare_arch_switch(rq);
 		prev = context_switch(prev, next);
 		barrier();
@@ -875,6 +914,7 @@ switch_tasks:
 	finish_arch_schedule(prev);
 
 	reacquire_kernel_lock(current);
+	//if policy is enabled && current proccess is not minimal pid proc' then reschedule;
 	if (need_resched())
 		goto need_resched;
 }
@@ -935,7 +975,7 @@ void __wake_up_sync(wait_queue_head_t *q, unsigned int mode, int nr_exclusive)
 }
 
 #endif
- 
+
 void complete(struct completion *x)
 {
 	unsigned long flags;
@@ -1008,7 +1048,7 @@ long interruptible_sleep_on_timeout(wait_queue_head_t *q, long timeout)
 void sleep_on(wait_queue_head_t *q)
 {
 	SLEEP_ON_VAR
-	
+
 	current->state = TASK_UNINTERRUPTIBLE;
 
 	SLEEP_ON_HEAD
@@ -1019,7 +1059,7 @@ void sleep_on(wait_queue_head_t *q)
 long sleep_on_timeout(wait_queue_head_t *q, long timeout)
 {
 	SLEEP_ON_VAR
-	
+
 	current->state = TASK_UNINTERRUPTIBLE;
 
 	SLEEP_ON_HEAD
@@ -1073,7 +1113,6 @@ out_unlock:
  * moved into the arch dependent tree for those ports that require
  * it for backward compatibility?
  */
-
 asmlinkage long sys_nice(int increment)
 {
 	long nice;
@@ -1371,6 +1410,12 @@ out_unlock:
 
 asmlinkage long sys_sched_yield(void)
 {
+	// ==> AI
+	runqueue_t *rq2 = this_rq();
+	if(rq2->regime && current->policy == SCHED_CHANGEABLE){
+		return 0;
+	}
+
 	runqueue_t *rq = this_rq_lock();
 	prio_array_t *array = current->array;
 	int i;
@@ -1621,12 +1666,14 @@ void __init sched_init(void)
 		prio_array_t *array;
 
 		rq = cpu_rq(i);
+		rq->regime = 0;
 		rq->active = rq->arrays;
 		rq->expired = rq->arrays + 1;
+		rq->sc_queue = rq->arrays + 2;
 		spin_lock_init(&rq->lock);
 		INIT_LIST_HEAD(&rq->migration_queue);
 
-		for (j = 0; j < 2; j++) {
+		for (j = 0; j < 3; j++) {
 			array = rq->arrays + j;
 			for (k = 0; k < MAX_PRIO; k++) {
 				INIT_LIST_HEAD(array->queue + k);
@@ -1827,6 +1874,35 @@ void __init migration_init(void)
 static struct lolat_stats_t *lolat_stats_head;
 static spinlock_t lolat_stats_lock = SPIN_LOCK_UNLOCKED;
 
+// ==> AI
+int get_regime(){
+	runqueue_t* rq = this_rq();
+	return rq->regime;
+}
+// ==> AI
+void change_regime(int activate){
+	runqueue_t* rq = this_rq();
+	rq->regime = activate;
+}
+// ==> AI
+int get_sc_min_pid(){
+	runqueue_t *rq = this_rq();
+	struct list_head* tmp;
+	task_t* curr;
+	int min_pid=-1;
+
+	list_for_each(tmp, rq->sc_queue->queue[0]) {
+		curr = list_entry(tmp, task_t, run_list);
+		if(min_pid == -1){
+			min_pid = curr->pid_t;
+		}
+		if(curr->pid_t < min_pid){
+			min_pid = curr->pid_t;
+		}
+	}
+	return min_pid;
+}
+
 void set_running_and_schedule(struct lolat_stats_t *stats)
 {
 	spin_lock(&lolat_stats_lock);
@@ -1909,4 +1985,3 @@ struct low_latency_enable_struct __enable_lowlatency = { 0, };
 #endif
 
 #endif	/* LOWLATENCY_NEEDED */
-

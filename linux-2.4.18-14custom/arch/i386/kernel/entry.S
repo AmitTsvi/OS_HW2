@@ -650,6 +650,11 @@ ENTRY(sys_call_table)
 	.long SYMBOL_NAME(sys_sched_setaffinity)
 	.long SYMBOL_NAME(sys_sched_getaffinity)
 
+    .long SYMBOL_NAME(sys_is_changeable) /* 243 */
+    .long SYMBOL_NAME(sys_make_changeable)
+    .long SYMBOL_NAME(sys_change)
+    .long SYMBOL_NAME(sys_get_policy)
+
 	.rept NR_syscalls-(.-sys_call_table)/4
 		.long SYMBOL_NAME(sys_ni_syscall)
 	.endr
