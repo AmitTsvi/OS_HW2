@@ -228,7 +228,7 @@ inline void sc_dequeue_task(struct task_struct *p, prio_array_t *array, runqueue
 		__clear_bit(0, array->bitmap);
 		rq->regime = 0; // init regime;
 	}
-	printk("==> AI <E> sc_dequeue_task\n");
+	printk("==> AI <E> sc_dequeue_task the regime is %d\n",rq->regime);
 }
 
 static inline void enqueue_task(struct task_struct *p, prio_array_t *array)
@@ -293,7 +293,7 @@ static inline void activate_task(task_t *p, runqueue_t *rq)
 	}
 	enqueue_task(p, array);
 	if(p->policy == SCHED_CHANGEABLE){
-		printk("==> AI activate_task with SCHED_CHANGEABLE policy and pid: %d\n",p->pid);
+		printk("==> AI activate_task with SCHED_CHANGEABLE policy and pid: %u\n",p->pid);
 		sc_enqueue_task(p, rq->sc_queue);
 	}
 	rq->nr_running++;
@@ -412,7 +412,7 @@ repeat_lock_task:
 			if(p->prio < rq->curr->prio)
 				resched_task(rq->curr);
 		}else{
-			if(p->prio < rq->curr->prio && rq->curr->prio != SCHED_CHANGEABLE){
+			if(p->prio < rq->curr->prio && rq->curr->policy != SCHED_CHANGEABLE){
 				printk("==> AI: in sched.c try_to_wake_up regime-on processes are NOT SCHED_CHANGEABLE p->prio < rq->curr->prio\n");
 				resched_task(rq->curr);
 			}
@@ -744,7 +744,7 @@ static inline void idle_tick(void)
 
 #endif
 
-static int get_sc_min_pid(void);
+static pid_t get_sc_min_pid(void);
 
 /*
  * We place interactive tasks back into the active array, if possible.
@@ -847,23 +847,23 @@ out:
 void scheduling_functions_start_here(void) { }
 
 // ==> AI
-static int get_sc_min_pid(void){
+static pid_t get_sc_min_pid(void){
 	printk("==> AI <B> get sc min pid\n");
 	runqueue_t *rq = this_rq();
 	struct list_head* tmp;
 	task_t* curr;
-	int min_pid=-1;
+	pid_t min_pid=0;
 
 	list_for_each(tmp, rq->sc_queue->queue) {
 		curr = list_entry(tmp, task_t, run_list);
-		if(min_pid == -1){
+		if(min_pid == 0){
 			min_pid = curr->pid;
 		}
 		if(curr->pid < min_pid){
 			min_pid = curr->pid;
 		}
 	}
-	printk("==> AI <E> get sc min - pid value %d\n",min_pid);
+	printk("==> AI <E> get sc min - pid value %u\n",min_pid);
 	return min_pid;
 }
 
@@ -931,7 +931,7 @@ pick_next_task:
 	//==> AI; if policy is enabled && next policy is SC;
 	//				then check if it is the minimal pid if not move to expired
 	if(rq->regime && next->policy == SCHED_CHANGEABLE){
-		int min_sc = get_sc_min_pid();
+		pid_t min_sc = get_sc_min_pid();
 		if(next->pid != min_sc){
 			printk("==> AI reschedule SC process without minimum sc pid\n");
 			dequeue_task(next, rq->active);
@@ -2032,8 +2032,8 @@ int sys_make_changeable(pid_t pid){
     }
     runqueue_t *rq = this_rq();
     spin_lock_irq(&rq->lock);
-    sc_enqueue_task(p, rq->sc_queue);
 	p->policy = SCHED_CHANGEABLE;
+    sc_enqueue_task(p, rq->sc_queue);
     spin_unlock_irq(&rq->lock);
 	printk("==> AI <E> sys_make_changeable SUCCESS\n");
     return 0;
