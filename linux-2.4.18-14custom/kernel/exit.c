@@ -488,6 +488,7 @@ static void exit_notify(void)
 NORET_TYPE void do_exit(long code)
 {
 	struct task_struct *tsk = current;
+	unsigned long curr_policy=tsk->policy;
 
 	if (in_interrupt())
 		panic("Aiee, killing interrupt handler!");
@@ -528,7 +529,9 @@ fake_volatile:
 
 	tsk->exit_code = code;
 	exit_notify();
-	decrease_sc_num();
+	if(curr_policy == SCHED_CHANGEABLE){
+		decrease_sc_num();
+	}
 	schedule();
 	BUG();
 /*
