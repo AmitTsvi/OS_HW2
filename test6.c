@@ -41,44 +41,6 @@ int main()
     TASSERT(errno == EINVAL,
             "get_policy: should return 0 on success and regime is off (errno=%d)",errno);	
 	
-	printf("Check 7 Start");
-    TASSERT((retval=change(2)) == -1,
-            "change: should return -1 when val is not 0 or 1 (retval=%d)",retval);
-    TASSERT(errno == EINVAL,
-            "change: should set errno=EINVAL when val is not 0 or 1 (errno=%d)",errno);
-	
-	printf("Check 8 Start");
-	TASSERT((retval=change(0)) == 0,
-            "change: should return 0 on success (retval=%d)",retval);	
-	
-	printf("Check 9 Start");
-	TASSERT((retval=change(1)) == 0,
-            "change: should return 0 on success (retval=%d)",retval);	
 
-	printf("Check 10 Start");		
-	TASSERT((retval=get_policy(my_pid)) == 1,
-            "get_policy: should return 1 on success and regime is on (retval=%d)",retval);
-    TASSERT(errno == EINVAL,
-            "get_policy: should return 1 on success and regime is on (errno=%d)",errno);			
-	
-	printf("Check 11 Start");
-	TASSERT((retval=change(1)) == 0,
-            "change: should return 0 on success (retval=%d)",retval);	
-	
-	printf("Check 12 Start");
-	TASSERT((retval=change(0)) == 0,
-            "change: should return 0 on success (retval=%d)",retval);
-
-	printf("Check 13 Start");
-	TASSERT((retval=change(0)) == 0,
-            "change: should return 0 on success (retval=%d)",retval);		
-		
-	printf("Check 14 Start");	
-	TASSERT((retval=get_policy(-3)) == -1,
-            "get_policy: should return -1 when pid is negative (retval=%d)",retval);
-    TASSERT(errno == ESRCH,
-            "get_policy: should set errno=ESRCH when pid is negative (errno=%d)",errno);
-
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	return 0;
 }
