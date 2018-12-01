@@ -412,14 +412,15 @@ repeat_lock_task:
 			if(p->prio < rq->curr->prio)
 				resched_task(rq->curr);
 		}else{
-			if(p->prio < rq->curr->prio && rq->curr->policy != SCHED_CHANGEABLE){
-				printk("==> AI: in sched.c try_to_wake_up regime-on processes are NOT SCHED_CHANGEABLE p->prio < rq->curr->prio\n");
-				resched_task(rq->curr);
-			}
-			if(rq->curr->policy == SCHED_CHANGEABLE &&
-				p->policy == SCHED_CHANGEABLE && rq->curr->pid > p->pid){
-				printk("==> AI: in sched.c try_to_wake_up regime-on processes are SCHED_CHANGEABLE rq->curr->pid > p->pid\n");
-				resched_task(rq->curr);
+			if(rq->curr->policy == SCHED_CHANGEABLE && p->policy == SCHED_CHANGEABLE){
+				if(rq->curr->pid > p->pid){
+					printk("==> AI: in sched.c try_to_wake_up regime-on processes are SCHED_CHANGEABLE rq->curr->pid > p->pid\n");
+					resched_task(rq->curr);
+				}
+			}else{
+				if(p->prio < rq->curr->prio){
+					resched_task(rq->curr);
+				}
 			}
 		}
 		success = 1;
