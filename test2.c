@@ -18,6 +18,6 @@ int main()
             "make_changeable: should return -1 when pid is negative (retval=%d)",retval);
     TASSERT(errno == ESRCH,
             "make_changeable: should set errno=ESRCH when pid is negative (errno=%d)",errno);
-	
+		change(0);
 	return 0;
 }

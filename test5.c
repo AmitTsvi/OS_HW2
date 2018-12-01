@@ -34,6 +34,6 @@ int main()
             "make_changeable: should return -1 when calling process is already SC (retval=%d)",retval);
     TASSERT(errno == EINVAL,
             "make_changeable: should set errno=EINVAL when calling process is already SC (errno=%d)",errno);		
-
+	change(0);
 	return 0;
 }

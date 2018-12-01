@@ -28,6 +28,6 @@ int main()
 	printf("Check 4 Start");	
 	TASSERT((retval=make_changeable(my_pid)) == 0,
             "make_changeable: should return 0 on success (retval=%d)",retval);
-
+	change(0);
 	return 0;
 }

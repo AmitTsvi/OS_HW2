@@ -25,6 +25,6 @@ int main()
     TASSERT(errno == EINVAL,
             "get_policy: should set errno=EINVAL when process is not SC (errno=%d)",errno);		
 		
-
+	change(0);
 	return 0;
 }

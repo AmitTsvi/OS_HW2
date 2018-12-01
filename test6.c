@@ -41,6 +41,6 @@ int main()
     TASSERT(errno == EINVAL,
             "get_policy: should return 0 on success and regime is off (errno=%d)",errno);	
 	
-
+	change(0);
 	return 0;
 }
