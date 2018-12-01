@@ -168,6 +168,8 @@ extern int current_is_keventd(void);
 // ==> AI
 int get_regime(void);
 void change_regime(int activate);
+void decrease_sc_num(void);
+void increase_sc_num(void);
 // inline void sc_dequeue_task(struct task_struct *p, prio_array_t *array, runqueue_t *rq);
 // inline void sc_enqueue_task(struct task_struct *p, prio_array_t *array);
 void add_task_to_sc_queue(struct task_struct *p);

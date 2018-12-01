@@ -788,6 +788,7 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	// ==> AI :
 	if (p->policy == SCHED_CHANGEABLE){
 		add_task_to_sc_queue(p);
+		increase_sc_num();
 	}
 
 fork_out:

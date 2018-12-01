@@ -226,7 +226,6 @@ inline void sc_dequeue_task(struct task_struct *p, prio_array_t *array, runqueue
 	list_del(&p->sc_run_list);
 	if (list_empty(array->queue)){
 		__clear_bit(0, array->bitmap);
-		rq->regime = 0; // init regime;
 	}
 	printk("==> AI <E> sc_dequeue_task the regime is %d\n",rq->regime);
 }
@@ -936,6 +935,8 @@ pick_next_task:
 		if(next->pid != min_sc){
 			printk("==> AI reschedule SC process without minimum sc pid\n");
 			dequeue_task(next, rq->active);
+			if (!rq->expired_timestamp)
+				rq->expired_timestamp = jiffies;
 			enqueue_task(next, rq->expired);
 			spin_unlock_irq(&rq->lock);
 			goto need_resched;
@@ -2010,6 +2011,20 @@ int ll_copy_from_user(void *to, const void *from_user, unsigned long len)
 	return 0;
 }
 // ==> AI
+int sc_num=0;
+void decrease_sc_num(void){
+	sc_num--;
+	if(sc_num <= 0){
+		runqueue_t *rq = this_rq();
+		rq->regime = 0;
+		printk("==> AI REGIME SET OFF BECAUSE NO SC LEFT\n");
+	}
+	printk("==> AI decrease_sc_num | sc_num=%d\n",sc_num);
+}
+void increase_sc_num(void){
+	sc_num++;
+	printk("==> AI increase_sc_num | sc_num=%d\n",sc_num);
+}
 typedef struct task_struct task_tt;
 
 int sys_is_changeable(pid_t pid){
@@ -2035,6 +2050,10 @@ int sys_make_changeable(pid_t pid){
     spin_lock_irq(&rq->lock);
 	p->policy = SCHED_CHANGEABLE;
     sc_enqueue_task(p, rq->sc_queue);
+	increase_sc_num();
+	if(pid == current->pid){
+		current->need_resched = 1;
+	}
     spin_unlock_irq(&rq->lock);
 	printk("==> AI <E> sys_make_changeable SUCCESS\n");
     return 0;
@@ -2045,10 +2064,18 @@ int sys_change(int val){
     if(val != 1 && val != 0){
         return -EINVAL;
     }
+	if(sc_num == 0){
+		return 0;
+	}
     runqueue_t *rq = this_rq();
+	spin_lock_irq(&rq->lock);
     rq->regime=val;
-    if(current->policy == SCHED_CHANGEABLE)
-        current->need_resched=1;
+    if(current->policy == SCHED_CHANGEABLE){
+		pid_t min = get_sc_min_pid();
+		if(current->pid != min)
+        	current->need_resched=1;
+	}
+	spin_unlock_irq(&rq->lock);
 	printk("==> AI <E> sys_change SUCCESS\n");
     return 0;
 }
@@ -2074,7 +2101,7 @@ void add_task_to_sc_queue(task_t *p){
 	// sc_enqueue_task(p);
 	// spin_unlock_irq(rq);
 	//child is SC so push him to special queue
-	if(rq->regime)
+	if(rq->regime && current->pid < p->pid)
 		current->need_resched = 0;
 	//when policy on father should not leave cpu
 

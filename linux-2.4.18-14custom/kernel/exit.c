@@ -528,6 +528,7 @@ fake_volatile:
 
 	tsk->exit_code = code;
 	exit_notify();
+	decrease_sc_num();
 	schedule();
 	BUG();
 /*
