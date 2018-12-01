@@ -9,18 +9,20 @@
 #include "test.h"
 int main(){
     /* ~~~~~~~~~~~~ Stress tests ~~~~~~~~~~~~~~~ */
-     struct sched_param param;
-        param.sched_priority = 0;
+
         int i;
     for (i = 0; i < 1000000 ; i++) {
+        if(i==0){
         TASSERT( is_changeable(getpid()) == 0,
         "Stress tests: is_changeable has failed", __LINE__);
         TASSERT( get_policy(getpid()) == -1,
         "Stress tests: get_policy has failed ", __LINE__);
         TASSERT( errno==EINVAL,
         "Stress tests: get_policy has failed", __LINE__);
+    
         TASSERT( make_changeable(getpid()) == 0,
         "Stress tests: make_changeable has failed", __LINE__);
+        }
         TASSERT( get_policy(getpid()) == 0,
         "Stress tests: get_policy has failed ", __LINE__);
         TASSERT( change(1) == 0, 
@@ -31,14 +33,18 @@ int main(){
         "Stress tests: change has failed ", __LINE__);
         TASSERT( is_changeable(getpid()) == 1,
         "Stress tests: is_changeable has failed ", __LINE__);
-        sched_setscheduler(getpid(), SCHED_OTHER, & param);
-        TASSERT( is_changeable(getpid()) == 0,
-        "Stress tests: is_changeable has failed ", __LINE__);
-        TASSERT( make_changeable(getpid()) == 0,
-        "Stress tests: make_changeable has failed ", __LINE__);
-        TASSERT( get_policy(getpid()) == 0,
-        "Stress tests: get_policy has failed ", __LINE__);
-        sched_setscheduler(getpid(), SCHED_OTHER, & param);
     }
-    printf("Test 6 passed\n");
+    //sc process, policy off
+    FILE* file = fopen("test6.txt","w");
+    TASSERT( change(1) == 0,
+        "Stress tests: change has failed ", __LINE__);
+    for(i=0;i<12;i++){
+        fork();
+    }
+        TASSERT( is_changeable(getpid()) == 1,
+        "Stress tests: is_changeable has failed ", __LINE__);
+        TASSERT( get_policy(getpid()) == 1,
+        "Stress tests: get_policy has failed ", __LINE__);
+        fprintf(file,"%d\n",getpid());
+   // printf("Test 6 passed\n");
 }
