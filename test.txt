@@ -108,27 +108,19 @@ rm test5.txt
 g++ test6.c -o test6
 echo "Running test 6"
 ./test6
-rm test6
-g++ test7.c -o test7
-echo "Running test 7"
-./test7
 sleep 1
 i=1
+prv_line=""
 while read line; do 
-if (( $i < 1002)); then
-	if (( $line != 1 )); then
-		echo "policy should be enabled"
-		exit
-	fi
-fi
-if (( $i > 1001 )); then
-	if (( 0 != $line )); then
-		echo "policy should be disabled since SC processes count is 0"
+if (($i != 1 )); then
+	if (( $prv_line > $line)); then
+		echo "process do not run in ascending pid order when streesed"
 		exit
 	fi
 fi
 i=$i+1
-done < test7.txt
-echo "Test 7 passed"
-rm test7
-rm test7.txt
+prv_line=$line
+done < test6.txt
+echo "Test 6 passed"
+rm test6.txt
+rm test6

@@ -9,8 +9,6 @@
 #include "test.h"
 int main(){
     FILE* file = fopen("test5.txt","w");
-    struct sched_param param;
-        param.sched_priority = 99;
     pid_t p = fork();
     if(p==0){
         TASSERT(make_changeable(getpid())==0,
@@ -35,9 +33,7 @@ int main(){
             }
         }
         out1:
-        param.sched_priority = 0;
         nice(20);
-        sched_setscheduler(getpid(), SCHED_OTHER, & param);
         busy_wait_by_sec(1);
     }
     
