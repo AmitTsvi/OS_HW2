@@ -856,7 +856,7 @@ static pid_t get_sc_min_pid(void){
 	pid_t min_pid=0;
 
 	list_for_each(tmp, rq->sc_queue->queue) {
-		curr = list_entry(tmp, task_t, run_list);
+		curr = list_entry(tmp, task_t, sc_run_list);
 		if(min_pid == 0){
 			min_pid = curr->pid;
 		}
