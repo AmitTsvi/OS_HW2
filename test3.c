@@ -17,7 +17,7 @@ int main(){
     pid_t p = fork();
     int j=0;
     if(p==0){
-        for(j=0;j<1000;j++){
+        for(j=0;j<100;j++){
             pid_t p1=fork();
             if(p1!=0){
                 wait(NULL);

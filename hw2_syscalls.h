@@ -20,7 +20,7 @@ int is_changeable(pid_t pid){
         errno = -res;
         return -1;
     }
-    return 0;
+    return res;
 }
 
 int make_changeable(pid_t pid){
@@ -68,7 +68,7 @@ int get_policy(pid_t pid){
         errno = -res;
         return -1;
     }
-    return 0;
+    return res;
 }
 
 #endif //_HW2_SYSCALLS

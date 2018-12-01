@@ -848,7 +848,6 @@ void scheduling_functions_start_here(void) { }
 
 // ==> AI
 static pid_t get_sc_min_pid(void){
-	printk("==> AI <B> get sc min pid\n");
 	runqueue_t *rq = this_rq();
 	struct list_head* tmp;
 	task_t* curr;
@@ -857,7 +856,6 @@ static pid_t get_sc_min_pid(void){
 	list_for_each(tmp, rq->sc_queue->queue) {
 		i++;
 		curr = list_entry(tmp, task_t, sc_run_list);
-		printk("==> AI in place %d pid=%u, min_pid=%u\n",i,curr->pid,min_pid);
 		if(min_pid == 0){
 			min_pid = curr->pid;
 		}
@@ -865,7 +863,7 @@ static pid_t get_sc_min_pid(void){
 			min_pid = curr->pid;
 		}
 	}
-	printk("==> AI <E> get sc min - pid value %u\n",min_pid);
+	printk("==> AI get_sc_min - pid value %u\n",min_pid);
 	return min_pid;
 }
 
@@ -2035,7 +2033,7 @@ int sys_is_changeable(pid_t pid){
     if(!p){
         return -ESRCH;
     }
-	printk("==> AI <E> sys_is_changeable SUCCESS\n");
+	printk("==> AI <E> sys_is_changeable SUCCESS pid=%u, policy=%lu\n",p->pid,p->policy);
     return p->policy == SCHED_CHANGEABLE;
 }
 
@@ -2086,7 +2084,7 @@ int sys_change(int val){
         	current->need_resched=1;
 	}
 	spin_unlock_irq(&rq->lock);
-	printk("==> AI <E> sys_change SUCCESS\n");
+	printk("==> AI <E> sys_change SUCCESS return %d\n",val);
     return 0;
 }
 
@@ -2100,7 +2098,7 @@ int sys_get_policy(pid_t pid){
         return -EINVAL;
     }
     runqueue_t *rq = this_rq();
-	printk("==> AI <E> sys_get_policy SUCCESS\n");
+	printk("==> AI <E> sys_get_policy return %d SUCCESS\n",rq->regime);
     return rq->regime;
 }
 
