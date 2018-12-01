@@ -653,6 +653,7 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 		goto bad_fork_cleanup;
 
 	INIT_LIST_HEAD(&p->run_list);
+	INIT_LIST_HEAD(&p->sc_run_list);
 
 	p->p_cptr = NULL;
 	init_waitqueue_head(&p->wait_chldexit);
@@ -767,7 +768,6 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 		p->tgid = current->tgid;
 		list_add(&p->thread_group, &current->thread_group);
 	}
-
 	SET_LINKS(p);
 	hash_pid(p);
 	nr_threads++;
