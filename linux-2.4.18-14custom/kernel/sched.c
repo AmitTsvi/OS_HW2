@@ -2046,6 +2046,9 @@ int sys_make_changeable(pid_t pid){
     if(current->policy == SCHED_CHANGEABLE || p->policy == SCHED_CHANGEABLE){
         return -EINVAL;
     }
+	if(p->policy != SCHED_OTHER){
+		return -EINVAL;
+	}
     runqueue_t *rq = this_rq();
     spin_lock_irq(&rq->lock);
 	p->policy = SCHED_CHANGEABLE;
