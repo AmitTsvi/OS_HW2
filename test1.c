@@ -23,7 +23,7 @@ int main(){
     TASSERT(get_policy(-1)==-1,
         "get_policy: should return -1 when process does not exists",__LINE__);
              TASSERT( errno==ESRCH,
-    "get_policy: errno should return ESRCH when process does not exists",__LINE__);  
+    "get_policy: errno should return ESRCH when process does not exists",__LINE__);
     //test is_changeable
      TASSERT( is_changeable(getpid())==0,
     "is_changeable: should return 0 when process is not CS",__LINE__);
@@ -36,7 +36,7 @@ int main(){
     "make_changeable: should return -1 when process does not exists",__LINE__);
       TASSERT( errno==ESRCH,
     "make_changeable: errno should return ESRCH when process does not exists",__LINE__);
-    
+
     pid_t p =fork();
     if(p==0){
         TASSERT( make_changeable(getpid())==0,

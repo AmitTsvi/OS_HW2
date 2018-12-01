@@ -220,14 +220,14 @@ static inline void dequeue_task(struct task_struct *p, prio_array_t *array)
 		__clear_bit(p->prio, array->bitmap);
 }
  // ==> AI
-inline void sc_dequeue_task(struct task_struct *p, prio_array_t *array, runqueue_t *rq)
+inline void sc_dequeue_task(struct task_struct *p, prio_array_t *array)
 {
 	printk("==> AI <B> sc_dequeue_task\n");
 	list_del(&p->sc_run_list);
 	if (list_empty(array->queue)){
 		__clear_bit(0, array->bitmap);
 	}
-	printk("==> AI <E> sc_dequeue_task the regime is %d\n",rq->regime);
+	printk("==> AI <E> sc_dequeue_task\n");
 }
 
 static inline void enqueue_task(struct task_struct *p, prio_array_t *array)
@@ -307,7 +307,7 @@ static inline void deactivate_task(struct task_struct *p, runqueue_t *rq)
 	// ==> AI
 	if(p->policy == SCHED_CHANGEABLE){
 		printk("==> AI deactivate_task with SCHED_CHANGEABLE policy and pid: %d\n",p->pid);
-		sc_dequeue_task(p, rq->sc_queue, rq);
+		sc_dequeue_task(p, rq->sc_queue);
 	}
 
 	p->array = NULL;
@@ -853,9 +853,11 @@ static pid_t get_sc_min_pid(void){
 	struct list_head* tmp;
 	task_t* curr;
 	pid_t min_pid=0;
-
+	int i=0;
 	list_for_each(tmp, rq->sc_queue->queue) {
+		i++;
 		curr = list_entry(tmp, task_t, sc_run_list);
+		printk("==> AI in place %d pid=%u, min_pid=%u\n",i,curr->pid,min_pid);
 		if(min_pid == 0){
 			min_pid = curr->pid;
 		}
@@ -2043,6 +2045,9 @@ int sys_make_changeable(pid_t pid){
     if(!p){
         return -ESRCH;
     }
+	if(p->pid == 1 || p->pid == 0){
+		return -EINVAL;
+	}
     if(current->policy == SCHED_CHANGEABLE || p->policy == SCHED_CHANGEABLE){
         return -EINVAL;
     }
@@ -2052,8 +2057,10 @@ int sys_make_changeable(pid_t pid){
     runqueue_t *rq = this_rq();
     spin_lock_irq(&rq->lock);
 	p->policy = SCHED_CHANGEABLE;
-    sc_enqueue_task(p, rq->sc_queue);
 	increase_sc_num();
+	if(p->state == TASK_RUNNING){
+		sc_enqueue_task(p, rq->sc_queue);
+	}
 	if(pid == current->pid){
 		current->need_resched = 1;
 	}
