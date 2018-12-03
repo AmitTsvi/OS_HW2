@@ -16,12 +16,12 @@ int main(){
         TASSERT( get_policy(getpid())==1,
         "get_policy: should return 1 when policy enabled ",__LINE__);
         return 0;
-    }
+    }   
     else{
         busy_wait_by_sec(1);
         TASSERT( get_policy(p)==0,
         "get_policy: should return 0 when policy disabled due to all SC are zombies ",__LINE__);
-    }
+    } 
     //normal process, policy disabled
     /*fork normal process, then set father as Real time and send waiting for son,
         son should finish first since policy is on, should print the real time after his son
@@ -54,19 +54,19 @@ int main(){
             }
         }
 set_SCHED:
-    if(j<50)
-        sched_setscheduler(getpid(), SCHED_RR, & param);
+if(j<50)
+    sched_setscheduler(getpid(), SCHED_RR, & param);
     else{
         nice(20);
         param.sched_priority = 0;
         sched_setscheduler(getpid(), SCHED_OTHER, & param);
     }
-}
+    }
 print:
     if(get_policy(getpid())!=1){
         fprintf(file,"better prio/real time: %d\n",getpid());
     }
-    else
+    else 
         fprintf(file,"%d\n",getpid());
     return 0;
 }
