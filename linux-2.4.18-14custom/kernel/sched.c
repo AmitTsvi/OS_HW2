@@ -411,8 +411,7 @@ repeat_lock_task:
 			if(p->prio < rq->curr->prio)
 				resched_task(rq->curr);
 		}else{
-			if(rq->curr->policy == SCHED_CHANGEABLE && p->policy == SCHED_CHANGEABLE &&
-				 (p->prio >= 100 && rq->curr->prio >= 100)){
+			if(rq->curr->policy == SCHED_CHANGEABLE && p->policy == SCHED_CHANGEABLE){
 				if(rq->curr->pid > p->pid){
 					printk("==> AI: in sched.c try_to_wake_up regime-on processes are SCHED_CHANGEABLE rq->curr->pid > p->pid\n");
 					resched_task(rq->curr);
@@ -878,6 +877,7 @@ asmlinkage void schedule(void)
 	prio_array_t *array;
 	list_t *queue;
 	int idx;
+	pid_t sc_min = 0;
 
 	if (unlikely(in_interrupt()))
 		BUG();
@@ -932,9 +932,11 @@ pick_next_task2:
 	next = list_entry(queue->next, task_t, run_list);
 	//==> AI; if policy is enabled && next policy is SC;
 	//				then check if it is the minimal pid if not move to expired
-	if(rq->regime && next->policy == SCHED_CHANGEABLE && next->prio >= 100){
-		pid_t min_sc = get_sc_min_pid();
-		if(next->pid != min_sc){
+	if(rq->regime && next->policy == SCHED_CHANGEABLE){
+		if(sc_min == 0){
+			sc_min = get_sc_min_pid();
+		}
+		if(next->pid != sc_min){
 			printk("==> AI reschedule SC process without minimum sc pid\n");
 			dequeue_task(next, rq->active);
 			if (!rq->expired_timestamp)
@@ -2055,12 +2057,13 @@ int sys_make_changeable(pid_t pid){
 	}
     runqueue_t *rq = this_rq();
     spin_lock_irq(&rq->lock);
+	pid_t min_sc = get_sc_min_pid();
 	p->policy = SCHED_CHANGEABLE;
 	increase_sc_num();
 	if(p->state == TASK_RUNNING){
 		sc_enqueue_task(p, rq->sc_queue);
 	}
-	if(pid == current->pid){
+	if(pid == current->pid && pid != min_sc){
 		current->need_resched = 1;
 	}
     spin_unlock_irq(&rq->lock);
