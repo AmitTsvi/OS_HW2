@@ -222,12 +222,12 @@ static inline void dequeue_task(struct task_struct *p, prio_array_t *array)
  // ==> AI
 inline void sc_dequeue_task(struct task_struct *p, prio_array_t *array)
 {
-	printk("==> AI <B> sc_dequeue_task\n");
+	//printk("==> AI <B> sc_dequeue_task\n");
 	list_del(&p->sc_run_list);
 	if (list_empty(array->queue)){
 		__clear_bit(0, array->bitmap);
 	}
-	printk("==> AI <E> sc_dequeue_task\n");
+	//printk("==> AI <E> sc_dequeue_task\n");
 }
 
 static inline void enqueue_task(struct task_struct *p, prio_array_t *array)
@@ -240,10 +240,10 @@ static inline void enqueue_task(struct task_struct *p, prio_array_t *array)
  // ==> AI
 inline void sc_enqueue_task(struct task_struct *p, prio_array_t *array)
 {
-	printk("==> AI <B> sc_equeue_task\n");
+	//printk("==> AI <B> sc_equeue_task\n");
 	list_add_tail(&p->sc_run_list, array->queue);
 	__set_bit(0, array->bitmap);
-	printk("==> AI <E> sc_equeue_task\n");
+	//printk("==> AI <E> sc_equeue_task\n");
 }
 
 static inline int effective_prio(task_t *p)
@@ -292,7 +292,7 @@ static inline void activate_task(task_t *p, runqueue_t *rq)
 	}
 	enqueue_task(p, array);
 	if(p->policy == SCHED_CHANGEABLE){
-		printk("==> AI activate_task with SCHED_CHANGEABLE policy and pid: %u\n",p->pid);
+		//printk("==> AI activate_task with SCHED_CHANGEABLE policy and pid: %u\n",p->pid);
 		sc_enqueue_task(p, rq->sc_queue);
 	}
 	rq->nr_running++;
@@ -306,7 +306,7 @@ static inline void deactivate_task(struct task_struct *p, runqueue_t *rq)
 	dequeue_task(p, p->array);
 	// ==> AI
 	if(p->policy == SCHED_CHANGEABLE){
-		printk("==> AI deactivate_task with SCHED_CHANGEABLE policy and pid: %d\n",p->pid);
+		//printk("==> AI deactivate_task with SCHED_CHANGEABLE policy and pid: %d\n",p->pid);
 		sc_dequeue_task(p, rq->sc_queue);
 	}
 
@@ -413,7 +413,7 @@ repeat_lock_task:
 		}else{
 			if(rq->curr->policy == SCHED_CHANGEABLE && p->policy == SCHED_CHANGEABLE){
 				if(rq->curr->pid > p->pid){
-					printk("==> AI: in sched.c try_to_wake_up regime-on processes are SCHED_CHANGEABLE rq->curr->pid > p->pid\n");
+					//printk("==> AI: in sched.c try_to_wake_up regime-on processes are SCHED_CHANGEABLE rq->curr->pid > p->pid\n");
 					resched_task(rq->curr);
 				}
 			}else{
@@ -863,7 +863,7 @@ static pid_t get_sc_min_pid(void){
 			min_pid = curr->pid;
 		}
 	}
-	printk("==> AI get_sc_min - pid value %u\n",min_pid);
+	//printk("==> AI get_sc_min - pid value %u\n",min_pid);
 	return min_pid;
 }
 
@@ -937,7 +937,7 @@ pick_next_task2:
 			sc_min = get_sc_min_pid();
 		}
 		if(next->pid != sc_min){
-			printk("==> AI reschedule SC process without minimum sc pid\n");
+			////printk("==> AI reschedule SC process without minimum sc pid\n");
 			dequeue_task(next, rq->active);
 			if (!rq->expired_timestamp)
 				rq->expired_timestamp = jiffies;
@@ -2020,28 +2020,28 @@ void decrease_sc_num(void){
 	if(sc_num <= 0){
 		runqueue_t *rq = this_rq();
 		rq->regime = 0;
-		printk("==> AI REGIME SET OFF BECAUSE NO SC LEFT\n");
+		//printk("==> AI REGIME SET OFF BECAUSE NO SC LEFT\n");
 	}
-	printk("==> AI decrease_sc_num | sc_num=%d\n",sc_num);
+	//printk("==> AI decrease_sc_num | sc_num=%d\n",sc_num);
 }
 void increase_sc_num(void){
 	sc_num++;
-	printk("==> AI increase_sc_num | sc_num=%d\n",sc_num);
+	//printk("==> AI increase_sc_num | sc_num=%d\n",sc_num);
 }
 typedef struct task_struct task_tt;
 
 int sys_is_changeable(pid_t pid){
-	printk("==> AI <B> sys_is_changeable\n");
+	//printk("==> AI <B> sys_is_changeable\n");
     task_tt *p = find_task_by_pid(pid);
     if(!p){
         return -ESRCH;
     }
-	printk("==> AI <E> sys_is_changeable SUCCESS pid=%u, policy=%lu\n",p->pid,p->policy);
+	//printk("==> AI <E> sys_is_changeable SUCCESS pid=%u, policy=%lu\n",p->pid,p->policy);
     return p->policy == SCHED_CHANGEABLE;
 }
 
 int sys_make_changeable(pid_t pid){
-	printk("==> AI <B> sys_make_changeable\n");
+	//printk("==> AI <B> sys_make_changeable\n");
     task_tt *p = find_task_by_pid(pid);
     if(!p){
         return -ESRCH;
@@ -2067,12 +2067,12 @@ int sys_make_changeable(pid_t pid){
 		current->need_resched = 1;
 	}
     spin_unlock_irq(&rq->lock);
-	printk("==> AI <E> sys_make_changeable SUCCESS\n");
+	//printk("==> AI <E> sys_make_changeable SUCCESS\n");
     return 0;
 }
 
 int sys_change(int val){
-	printk("==> AI <B> sys_change\n");
+	//printk("==> AI <B> sys_change\n");
     if(val != 1 && val != 0){
         return -EINVAL;
     }
@@ -2088,13 +2088,13 @@ int sys_change(int val){
         	current->need_resched=1;
 	}
 	spin_unlock_irq(&rq->lock);
-	printk("==> AI <E> sys_change SUCCESS return %d\n",val);
+	//printk("==> AI <E> sys_change SUCCESS return %d\n",val);
     return 0;
 }
 
 int sys_get_policy(pid_t pid){
 	runqueue_t *rq = this_rq();
-	printk("==> AI <B> sys_get_policy curr val: %d\n", rq->regime);
+	//printk("==> AI <B> sys_get_policy curr val: %d\n", rq->regime);
     task_tt *p = find_task_by_pid(pid);
     if(!p){
         return -ESRCH;
@@ -2102,7 +2102,7 @@ int sys_get_policy(pid_t pid){
     if(p->policy != SCHED_CHANGEABLE){
         return -EINVAL;
     }
-	printk("==> AI <E> sys_get_policy return %d SUCCESS\n",rq->regime);
+	//printk("==> AI <E> sys_get_policy return %d SUCCESS\n",rq->regime);
     return rq->regime;
 }
 

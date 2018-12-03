@@ -530,7 +530,7 @@ fake_volatile:
 	exit_notify();
 	if(curr_policy == SCHED_CHANGEABLE){
 		decrease_sc_num();
-		printk("==> AI Do_Exit pid=%u, original policy=%lu, policy at end of exit=%lu, state is %ld\n", tsk->pid, curr_policy, tsk->policy, tsk->state);
+		//printk("==> AI Do_Exit pid=%u, original policy=%lu, policy at end of exit=%lu, state is %ld\n", tsk->pid, curr_policy, tsk->policy, tsk->state);
 
 	}
 	schedule();
