@@ -2089,7 +2089,8 @@ int sys_change(int val){
 }
 
 int sys_get_policy(pid_t pid){
-	printk("==> AI <B> sys_get_policy\n");
+	runqueue_t *rq = this_rq();
+	printk("==> AI <B> sys_get_policy curr val: %d\n", rq->regime);
     task_tt *p = find_task_by_pid(pid);
     if(!p){
         return -ESRCH;
@@ -2097,7 +2098,6 @@ int sys_get_policy(pid_t pid){
     if(p->policy != SCHED_CHANGEABLE){
         return -EINVAL;
     }
-    runqueue_t *rq = this_rq();
 	printk("==> AI <E> sys_get_policy return %d SUCCESS\n",rq->regime);
     return rq->regime;
 }
