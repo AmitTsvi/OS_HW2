@@ -528,9 +528,10 @@ fake_volatile:
 
 	tsk->exit_code = code;
 	exit_notify();
-	printk("==> AI Do_Exit pid=%u, original policy=%lu, policy at end of exit=%lu, state is %l\n", tsk->pid, curr_policy, tsk->policy, tsk->state);
 	if(curr_policy == SCHED_CHANGEABLE){
 		decrease_sc_num();
+		printk("==> AI Do_Exit pid=%u, original policy=%lu, policy at end of exit=%lu, state is %ld\n", tsk->pid, curr_policy, tsk->policy, tsk->state);
+
 	}
 	schedule();
 	BUG();
