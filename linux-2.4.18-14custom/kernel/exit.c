@@ -489,7 +489,9 @@ NORET_TYPE void do_exit(long code)
 {
 	struct task_struct *tsk = current;
 	unsigned long curr_policy=tsk->policy;
-
+	if (curr_policy == SCHED_CHANGEABLE){
+		printk("==> AI pid=%u, policy=%lu", tsk->pid, tsk->policy); 
+	}
 	if (in_interrupt())
 		panic("Aiee, killing interrupt handler!");
 	if (!tsk->pid)
@@ -529,6 +531,7 @@ fake_volatile:
 
 	tsk->exit_code = code;
 	exit_notify();
+	printk("==> AI pid=%u, original policy=%lu, policy at end of exit=%lu, state is %l", tsk->pid, curr_policy, tsk->policy, tsk->state); 
 	if(curr_policy == SCHED_CHANGEABLE){
 		decrease_sc_num();
 	}
